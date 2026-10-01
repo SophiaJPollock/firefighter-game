@@ -157,3 +157,15 @@ TURN ENDS
 3 budget is added for the next turn
 ↓
 Next timestep
+
+## Step 3.5 — Automated Testing
+
+### Goal
+
+Create automated tests for each development step to make sure new features do not break previous implementations. (Getting hard to keep track of everything in simulation)
+
+### Implemented
+
+- Created a separate test file for each development step.
+- Each test file covers the main aims and functionality implemented in that step.
+- Tests were added to keep track of which parts of the game are working as new features are added.
