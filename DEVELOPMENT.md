@@ -85,6 +85,75 @@ The game now tracks:
 - `defended` — the vertices that have been defended.
 - `turn` — the current timestep.
 
-### Next Step
+## Step 3 — Variable Defence Costs
 
-Add the variable defence-cost system
+### Goal
+
+Introduce defence costs that vary depending on the current state of the fire.
+- Add a budget of 3 per timestep.
+- Add a cost to each vertex.
+- Calculate costs based on fire distance in Cost-Based Mode.
+- Add Random-Cost Mode.
+- Prevent the player from defending a vertex they cannot afford.
+- Deduct the defence cost from the current budget.
+- Display the current cost and remaining budget.
+
+### Budget
+
+- The player starts with a budget of 3.
+- 3 budget is added at the start of every timestep.
+- Unused budget carries over between timesteps.
+- The player can save budget for more expensive defences.
+- A defence can only be made if the player has enough budget to pay its current cost.
+
+### Cost-Based Mode
+
+The cost of defending a vertex depends on its distance from the current fire:
+
+- 3 — vertex is directly adjacent to the fire.
+- 2 — vertex is two edges away from the fire.
+- 1 — vertex is three or more edges away from the fire.
+
+### Random-Cost Mode
+
+A second mode randomly assigns each vertex a cost of 1, 2, or 3.
+
+The costs are assigned when the game starts and remain fixed throughout the game.
+
+### Implemented
+
+- Added `cost_mode` to `__init__()` to select between distance and random costs.
+- Added `budget` to the game state.
+- Added `costs` to store calculated defence costs.
+- Added `calculate_distance_costs(vertex)`.
+- Added `calculate_random_costs(vertex)`.
+- Added `calculate_costs(vertex)` to select the appropriate cost calculation.
+- Updated `defend()` to:
+  - calculate the defence cost,
+  - check whether the player can afford it,
+  - deduct the cost from the budget,
+  - prevent unaffordable defences.
+- Updated `step()` to add 3 budget for the next timestep.
+- Updated the simulation to display defence costs and budget during the game.
+
+### Current Turn Structure
+
+START OF TURN
+↓
+Player has current budget
+↓
+Player chooses a vertex to defend
+↓
+Defence cost is checked
+↓
+Cost is deducted from budget
+↓
+Defence is applied
+↓
+Fire spreads
+↓
+TURN ENDS
+↓
+3 budget is added for the next turn
+↓
+Next timestep
