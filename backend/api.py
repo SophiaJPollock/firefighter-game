@@ -144,7 +144,7 @@ class GameHandler(BaseHTTPRequestHandler):
             return
 
         # Check action:
-        if self.path not in ("/api/defend", "/api/move"):
+        if self.path != "/api/defend":
             self.send_json(
                 {"error": "Not found"},
                 404,
@@ -187,11 +187,7 @@ class GameHandler(BaseHTTPRequestHandler):
                 return
 
             try:
-                if self.path == "/api/defend":
-                    game.defend(vertex)
-
-                else:
-                    game.step(vertex)
+                game.defend(vertex)
 
             except ValueError as error:
                 self.send_json(
