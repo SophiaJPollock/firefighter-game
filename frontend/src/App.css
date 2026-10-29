@@ -1,0 +1,242 @@
+
+/* Main page: */
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px;
+  color: #243444;
+}
+
+/* Title: */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 32px;
+  margin: 0 0 8px;
+  color: #1e293b;
+}
+
+.header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.turn {
+  background: #fff0e8;
+  color: #c4512c;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Game stats: */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat span {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.stat strong {
+  font-size: 28px;
+  color: #1e293b;
+}
+
+/* Game layout: */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* Grid area: */
+.graph-panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  min-height: 500px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.graph-panel button {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.graph-panel button:hover:not(:disabled) {
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.graph-panel button:disabled {
+  opacity: 1;
+  cursor: default !important;
+}
+
+.graph-panel button:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+/* Side panel: */
+.side-panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.side-panel h2 {
+  margin: 0 0 20px;
+  font-size: 22px;
+  color: #1e293b;
+}
+
+.side-panel h3 {
+  font-size: 15px;
+  margin: 20px 0 12px;
+  color: #334155;
+}
+
+.side-panel p {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.side-panel strong {
+  color: #1e293b;
+}
+
+/* Buttons: */
+.side-panel button {
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.side-panel button:nth-of-type(1) {
+  background: #2563eb;
+  color: white;
+}
+
+.side-panel button:nth-of-type(1):hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.side-panel button:nth-of-type(2) {
+  background: #e85b32;
+  color: white;
+}
+
+.side-panel button:nth-of-type(2):hover:not(:disabled) {
+  background: #c94a27;
+}
+
+.side-panel button:nth-of-type(3) {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.side-panel button:nth-of-type(3):hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.side-panel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+/* Legend: */
+.dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 3px;
+}
+
+.dot.red {
+  background: #dc2626;
+}
+
+.dot.blue {
+  background: #2563eb;
+}
+
+.dot.grey {
+  background: #cbd5e1;
+}
+
+.side-panel hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 24px 0;
+}
+
+/* Smaller screens: */
+@media (max-width: 800px) {
+  .app {
+    padding: 20px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-panel {
+    min-height: 350px;
+  }
+}
+
+@media (max-width: 500px) {
+  .app {
+    padding: 14px;
+  }
+
+  .header h1 {
+    font-size: 24px;
+  }
+
+  .stats {
+    gap: 8px;
+  }
+
+  .stat {
+    padding: 12px;
+  }
+
+  .stat strong {
+    font-size: 22px;
+  }
+
+  .side-panel {
+    padding: 18px;
+  }
+}

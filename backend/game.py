@@ -2,25 +2,68 @@ import random
 
 class FirefighterGame:
     
-    def __init__(self, graph, burning=None, defended=None, cost_mode="distance"):
-        self.graph = graph
-        # Game state:
+    def __init__(
+        self,
+        graph,
+        burning=None,
+        defended=None,
+        cost_mode="distance",
+        budget=3,
+        budget_per_turn=3,
+    ):
+        
+        self.graph = {
+            vertex: list(neighbours)
+            for vertex, neighbours in graph.items()
+        }
+        
+        for vertex, neighbours in self.graph.items():
+            for neighbour in neighbours:
+                if neighbour not in self.graph:
+                    raise ValueError(
+                        f"Vertex {vertex} references unknown "
+                        f"neighbour {neighbour}."
+                    )
+
         self.burning = set(burning or [])
         self.defended = set(defended or [])
+
+        if not self.burning.issubset(self.graph):
+            raise ValueError("Burning vertices must exist in the graph.")
+
+        if not self.defended.issubset(self.graph):
+            raise ValueError("Defended vertices must exist in the graph.")
+
+        if self.burning & self.defended:
+            raise ValueError("A vertex cannot be both burning and defended.")
+        
         self.turn = 0
-        # Budget:
-        self.budget = 3
-        # Defence costs: 
+        self.budget = budget
+        self.budget_per_turn = budget_per_turn
         self.cost_mode = cost_mode
         self.costs = {}
+        
+        if cost_mode not in ("distance", "random"):
+            raise ValueError("Invalid cost mode.")
+
+        if budget < 0 or budget_per_turn < 0:
+            raise ValueError("Budget values cannot be negative.")
     
     # Spreading & Blocking Fire:
     def defend(self, vertex):
+        
+        # Must exist in graph
+        if vertex not in self.graph:
+            raise ValueError("Unknown vertex.")
         
         # Cannot be already burning
         if vertex in self.burning:
             raise ValueError("Cannot defend a burning vertex.")
         
+        # Cannot be already defended
+        if vertex in self.defended:
+            raise ValueError("Vertex is already defended.")
+
         # Cannot cost more than budget
         cost = self.calculate_costs(vertex)
         
@@ -40,14 +83,16 @@ class FirefighterGame:
 
         self.burning = new_burning
     
-    def step(self, vertex):
-        # Make move
-        self.defend(vertex)
-        # Update environment
+    # End turn:
+    def end_turn(self):
         self.spread_fire()
-        # New turn
         self.turn += 1
-        self.budget += 3
+        self.budget += self.budget_per_turn
+
+    # Defend and end turn:
+    def step(self, vertex):
+        self.defend(vertex)
+        self.end_turn()
     
     # Defence Costs:
     def calculate_distance_costs(self, vertex):
