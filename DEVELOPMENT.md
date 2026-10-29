@@ -85,7 +85,7 @@ The game now tracks:
 - `defended` — the vertices that have been defended.
 - `turn` — the current timestep.
 
-## Step 3 — Variable Defence Costs
+## Step 3.1 — Variable Defence Costs
 
 ### Goal
 
@@ -158,7 +158,7 @@ TURN ENDS
 ↓
 Next timestep
 
-## Step 3.5 — Automated Testing
+## Step 3.2 — Automated Testing
 
 ### Goal
 
@@ -169,3 +169,72 @@ Create automated tests for each development step to make sure new features do no
 - Created a separate test file for each development step.
 - Each test file covers the main aims and functionality implemented in that step.
 - Tests were added to keep track of which parts of the game are working as new features are added.
+
+## Step 4.1 — Backend API
+
+### Goal
+Connect the Python game engine to a frontend.
+
+### Implemented
+- Created `backend/api.py` using Python's built-in HTTP server.
+- Added endpoints for getting the game state, defending vertices, ending turns and restarting.
+- Sent vertex states, defence costs, budget and turn information to the frontend.
+
+## Step 4.2 — React Frontend
+
+### Goal
+Get a playable React frontend working with the existing backend.
+
+### Development
+- Initially created a basic React prototype using React Flow.
+- The first version displayed a graph but the buttons were not properly functional.
+- Replaced with a simpler, interactive grid.
+- Connected React to the Python API.
+- Added vertex selection, defence costs, game statistics and working buttons.
+- Used colours and symbols to show burning, defended and safe vertices.
+
+## Step 4.3 — Grid Graph and Gameplay Improvements
+
+### Grid Graph
+- Created `backend/graphs/grid.py`.
+- Added a function to generate rectangular grid graphs.
+- Used a 5×5 grid for the current game.
+- Kept graph generation separate from the game logic so other graph types can be added later.
+
+### Multiple Defences Per Turn
+Noticed a bug where it automatically ended the turn after defending one vertex, even if there was budget remaining.
+
+To fix this:
+- Added `end_turn()` to `game.py`.
+- Separated defending vertices from spreading fire.
+- Allowed multiple defences per turn within the available budget.
+- Added separate Defend and End Turn buttons.
+- Updated the API to support these actions.
+- Fixed the budget increase to use `budget_per_turn`.
+- Prevented defending the same vertex twice.
+
+### Cleanup
+- Removed the unused React Flow dependency.
+- Removed unnecessary frontend assets.
+- Updated `.gitignore`.
+- Removed the old `/api/move` endpoint.
+- Removed the automated tests for now, with manual gameplay testing used during development.
+- Removed outdated simulation.py from backend
+
+## Current State
+
+The game now has a playable React frontend connected to the Python backend.
+
+Current settings:
+- 5×5 grid.
+- Fire starts at vertex 0.
+- Starting budget of 3.
+- Budget increases by 3 each turn.
+- Distance-based defence costs.
+- Multiple defences allowed per turn.
+- Fire spreads when the player ends the turn.
+
+## Next Steps
+- Add settings for grid size and starting conditions.
+- Allow different defence cost modes.
+- Consider supporting other graph types.
