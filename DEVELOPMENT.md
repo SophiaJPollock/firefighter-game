@@ -238,3 +238,21 @@ Current settings:
 - Add settings for grid size and starting conditions.
 - Allow different defence cost modes.
 - Consider supporting other graph types.
+- Add solver
+
+## Step 7 — Initial CP-SAT Solver
+
+### Goal
+
+Find a defence strategy that saves as many vertices as possible.
+
+### Implemented
+
+- Added `backend/solver/cpsat.py` using Google OR-Tools CP-SAT.
+- Expressed the existing game rules as CP-SAT constraints so the solver could search for a defence plan.
+- Replayed the solver's chosen moves through `FirefighterGame` to check that the final number of vertices saved matched the model's result.
+- The first run on a 3×3 grid returned `OPTIMAL` and saved 6 of 9 vertices.
+
+### Budget Change
+
+Updated both the game and the solver so the budget resets at the start of each new turn. With the current settings, the player gets a fresh 3 points each turn and any unused points expire.
