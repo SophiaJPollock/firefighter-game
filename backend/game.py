@@ -87,7 +87,7 @@ class FirefighterGame:
     def end_turn(self):
         self.spread_fire()
         self.turn += 1
-        self.budget += self.budget_per_turn
+        self.budget = self.budget_per_turn
 
     # Defend and end turn:
     def step(self, vertex):

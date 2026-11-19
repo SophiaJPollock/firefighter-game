@@ -70,7 +70,7 @@ def solve_game(game, time_limit=30):
         for t in range(horizon)
     }
 
-    max_budget = game.budget + horizon * game.budget_per_turn
+    max_budget = max(game.budget, game.budget_per_turn)
 
     budget = [
         model.NewIntVar(0, max_budget, f"budget_{t}")
@@ -172,7 +172,7 @@ def solve_game(game, time_limit=30):
 
         model.Add(
             budget[t + 1]
-            == budget[t] - total_cost + game.budget_per_turn
+            == game.budget_per_turn
         )
 
     # Maximise saved vertices:
