@@ -19,13 +19,13 @@ game_lock = Lock()
 
 
 # Create game:
-def create_game():
+def create_game(cost_mode=COST_MODE):
     graph = make_grid(GRID_ROWS, GRID_COLS)
 
     return FirefighterGame(
         graph=graph,
         burning=STARTING_FIRE,
-        cost_mode=COST_MODE,
+        cost_mode=cost_mode,
         budget=STARTING_BUDGET,
         budget_per_turn=BUDGET_PER_TURN,
     )
@@ -118,9 +118,17 @@ class GameHandler(BaseHTTPRequestHandler):
 
         # Restart game:
         if self.path == "/api/restart":
+            length = int(self.headers.get("Content-Length", 0))
+            data = json.loads(self.rfile.read(length)) if length else {}
+
+            cost_mode = data.get("cost_mode", COST_MODE)
+
+            if cost_mode not in ("distance", "random"):
+                self.send_json({"error": "Invalid cost mode"}, 400)
+                return
 
             with game_lock:
-                game = create_game()
+                game = create_game(cost_mode)
                 state = get_game_state()
 
             self.send_json(state)

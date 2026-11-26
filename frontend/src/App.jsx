@@ -29,6 +29,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [gameCostMode, setGameCostMode] = useState('distance');
 
   // Current screen:
   const [screen, setScreen] = useState("menu");
@@ -68,7 +69,7 @@ function App() {
   async function startGame({ costMode, layout }) {
     setSetupError('');
 
-    if (costMode !== 'distance' || layout !== 'grid') {
+    if (layout !== 'grid') {
       setSetupError('These settings are not available yet.');
       return;
     }
@@ -78,9 +79,16 @@ function App() {
     try {
       const state = await apiRequest('/api/restart', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cost_mode: costMode,
+        }),
       });
 
       setGame(state);
+      setGameCostMode(costMode);
       setSelected(null);
       setError('');
       setMessage('');
@@ -166,6 +174,12 @@ function App() {
     try {
       const newState = await apiRequest('/api/restart', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cost_mode: gameCostMode,
+        }),
       });
 
       setGame(newState);
