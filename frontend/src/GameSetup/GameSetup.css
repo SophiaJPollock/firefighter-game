@@ -1,0 +1,137 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+/* Game setup background: */
+.game-setup {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: auto;
+    background: #152923;
+    font-family: "Press Start 2P", monospace;
+}
+
+/* Yellow window: */
+.setup-window {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 650px;
+    padding: 40px;
+    background: #ffc453;
+    color: #211c18;
+    border: 6px solid #ffedb0;
+    box-shadow: 10px 10px #87331e;
+    box-sizing: border-box;
+}
+
+/* Title: */
+.setup-window h1 {
+    font-size: 26px;
+    text-align: center;
+    line-height: 1.5;
+    margin: 0 0 25px;
+}
+
+/* Section headings: */
+.setup-window h2 {
+    font-size: 15px;
+    margin: 25px 0;
+}
+
+/* Text: */
+.setup-window p,
+.setup-window label {
+    font-size: 11px;
+    line-height: 2;
+}
+
+/* Options: */
+.setup-window label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.setup-window input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #87331e;
+    cursor: pointer;
+}
+
+/* Dividers: */
+.setup-window hr {
+    border: none;
+    border-top: 3px solid #87331e;
+    margin: 25px 0;
+}
+
+/* Buttons: */
+.setup-window button {
+    font-family: "Press Start 2P", monospace;
+    font-size: 12px;
+    padding: 18px 12px;
+    background: #ffc453;
+    color: #211c18;
+    border: 4px solid #ffedb0;
+    border-radius: 0;
+    box-shadow: 5px 5px #87331e;
+    cursor: pointer;
+}
+
+/* Button hover: */
+.setup-window button:hover:not(:disabled) {
+    background: #ffe28a;
+    transform: translateY(-3px);
+}
+
+/* Button pressed: */
+.setup-window button:active:not(:disabled) {
+    transform: translate(5px, 5px);
+    box-shadow: none;
+}
+
+/* Disabled buttons: */
+.setup-window button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Small screens: */
+@media (max-width: 600px) {
+    .setup-window {
+        padding: 22px;
+    }
+
+    .setup-window h1 {
+        font-size: 18px;
+    }
+
+    .setup-window button {
+        font-size: 9px;
+    }
+}
+
+/* Pixel font: */
+.game-setup .setup-window,
+.game-setup .setup-window * {
+    font-family: "Press Start 2P", monospace;
+}
+
+/* Game settings title: */
+.setup-window h1 {
+    font-family: "Press Start 2P", monospace;
+    font-size: 30px;
+    text-align: center;
+    color: #211c18;
+    line-height: 1.6;
+    text-shadow: 3px 3px #ffedb0;
+    padding-bottom: 20px;
+    margin: 0 0 28px;
+    border-bottom: 4px solid #87331e;
+}

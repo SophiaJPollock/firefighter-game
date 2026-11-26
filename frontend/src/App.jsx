@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import MainMenu from "./MainMenu/MainMenu";
+import GameSetup from './GameSetup/GameSetup';
+
 // Connect to backend:
 const API_URL = 'http://127.0.0.1:8000';
 
@@ -30,6 +32,7 @@ function App() {
 
   // Current screen:
   const [screen, setScreen] = useState("menu");
+  const [setupError, setSetupError] = useState('');
 
   // Load game:
   useEffect(() => {
@@ -60,6 +63,34 @@ function App() {
       cancelled = true;
     };
   }, []);
+
+  // Start game:
+  async function startGame({ costMode, layout }) {
+    setSetupError('');
+
+    if (costMode !== 'distance' || layout !== 'grid') {
+      setSetupError('These settings are not available yet.');
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const state = await apiRequest('/api/restart', {
+        method: 'POST',
+      });
+
+      setGame(state);
+      setSelected(null);
+      setError('');
+      setMessage('');
+      setScreen('game');
+    } catch (err) {
+      setSetupError(`Could not start game: ${err.message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // Select vertex:
   const selectedVertex = game?.vertices.find(
@@ -149,7 +180,7 @@ function App() {
   
   // Main menu:
   if (screen === "menu") {
-      return <MainMenu onPlay={() => setScreen("game")} />;
+      return <MainMenu onPlay={() => setScreen("setup")} />;
   }
   // Loading screen:
   if (loading) {
@@ -158,6 +189,23 @@ function App() {
         <h1>Firefighter Game</h1>
         <p>Loading game...</p>
       </main>
+    );
+  }
+
+  // Game setup:
+  if (screen === 'setup') {
+    return (
+      <>
+        <GameSetup
+          onBack={() => {
+            setSetupError('');
+            setScreen('menu');
+          }}
+          onStart={startGame}
+          busy={busy}
+          error={setupError}
+        />
+      </>
     );
   }
 
