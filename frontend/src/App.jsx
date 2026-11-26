@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import './App.css';
 import MainMenu from "./MainMenu/MainMenu";
 import GameSetup from './GameSetup/GameSetup';
+import GraphView from './GraphView/GraphView';
 
 // Connect to backend:
 const API_URL = 'http://127.0.0.1:8000';
@@ -29,7 +30,13 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  // Cost Mode:
   const [gameCostMode, setGameCostMode] = useState('distance');
+
+  // Graph settings:
+  const [gameGraphId, setGameGraphId] = useState('graph_1');
+  const [gameLayout, setGameLayout] = useState('force');
 
   // Current screen:
   const [screen, setScreen] = useState("menu");
@@ -66,14 +73,17 @@ function App() {
   }, []);
 
   // Start game:
-  async function startGame({ costMode, layout }) {
+  async function startGame({ costMode, layout, graphId = 'graph_1' }) {
     setSetupError('');
 
-    if (layout !== 'grid') {
-      setSetupError('These settings are not available yet.');
+    // Check graph settings:
+    if (
+      !['force', 'radial', 'tree'].includes(layout) ||
+      !['graph_1', 'graph_2', 'graph_3'].includes(graphId)
+    ) {
+      setSetupError('Choose a valid graph and layout.');
       return;
     }
-
     setBusy(true);
 
     try {
@@ -83,11 +93,13 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cost_mode: costMode,
+          cost_mode: costMode, graph_id: graphId,
         }),
       });
 
       setGame(state);
+      setGameGraphId(graphId);
+      setGameLayout(layout);
       setGameCostMode(costMode);
       setSelected(null);
       setError('');
@@ -178,7 +190,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cost_mode: gameCostMode,
+          cost_mode: gameCostMode, graph_id: gameGraphId,
         }),
       });
 
@@ -249,7 +261,7 @@ function App() {
       <header className="header">
         <div>
           <h1>Firefighter Game</h1>
-          <p>Protect the grid from spreading fire.</p>
+          <p>Protect the graph from spreading fire.</p>
         </div>
 
         <span className="turn">Turn {game.turn}</span>
@@ -288,7 +300,7 @@ function App() {
 
       <section className="workspace">
 
-        {/* Grid: */}
+        {/* Graph display: */}
         <div
           className="graph-panel"
           style={{
@@ -299,89 +311,16 @@ function App() {
             overflow: 'auto',
           }}
         >
-          <div
-            role="grid"
-            aria-label="Firefighter game grid"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${game.cols}, minmax(0, 1fr))`,
-              gap: 8,
-              width: '100%',
-              maxWidth: 500,
-            }}
-          >
-            {game.vertices.map((vertex) => {
-
-              // Vertex status:
-              const isBurning = vertex.status === 'burning';
-              const isDefended = vertex.status === 'defended';
-              const isSelected = selected === vertex.id;
-
-              // Vertex colours:
-              let background = '#f1f5f9';
-              let colour = '#334155';
-              let symbol = null;
-
-              if (isBurning) {
-                background = '#dc2626';
-                colour = 'white';
-                symbol = '🔥';
-              } else if (isDefended) {
-                background = '#2563eb';
-                colour = 'white';
-                symbol = '🛡️';
-              }
-
-              // Vertex button:
-              return (
-                <button
-                  key={vertex.id}
-                  type="button"
-                  role="gridcell"
-                  aria-selected={isSelected}
-                  aria-label={
-                    `Vertex ${vertex.id}, ${vertex.status}` +
-                    (vertex.cost !== null
-                      ? `, defence cost ${vertex.cost}`
-                      : '')
-                  }
-                  onClick={() => setSelected(vertex.id)}
-                  disabled={
-                    busy ||
-                    game.game_over ||
-                    isBurning ||
-                    isDefended
-                  }
-                  style={{
-                    aspectRatio: '1',
-                    minWidth: 0,
-                    borderRadius: 8,
-                    border: isSelected
-                      ? '3px solid #f59e0b'
-                      : '1px solid #cbd5e1',
-                    background,
-                    color: colour,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 4,
-                    padding: 4,
-                  }}
-                >
-                  <span style={{ fontSize: 12 }}>
-                    {vertex.id}
-                  </span>
-
-                  <strong style={{ fontSize: 20 }}>
-                    {symbol ?? vertex.cost}
-                  </strong>
-                </button>
-              );
-            })}
-          </div>
+          <GraphView
+            game={game}
+            layout={gameLayout}
+            selected={selected}
+            onSelect={setSelected}
+            busy={busy}
+          />
         </div>
+      
+
 
         {/* Game controls: */}
         <aside className="side-panel">
@@ -418,7 +357,7 @@ function App() {
               )}
             </>
           ) : (
-            <p>Select a safe cell on the grid.</p>
+            <p>Select a safe vertex on the graph.</p>
           )}
 
           {/* Defend button: */}

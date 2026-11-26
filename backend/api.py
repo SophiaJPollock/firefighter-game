@@ -2,9 +2,10 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
-
+from pathlib import Path
 from backend.game import FirefighterGame
 from backend.graphs.grid import make_grid
+
 
 
 # Game settings:
@@ -17,10 +18,37 @@ COST_MODE = "distance"
 
 game_lock = Lock()
 
+# Graph presets:
+GRAPH_PRESETS = ("graph_1", "graph_2", "graph_3")
+current_graph_id = "grid"
+
+
+# Load graph:
+def load_graph(graph_id):
+    if graph_id == "grid":
+        return make_grid(GRID_ROWS, GRID_COLS)
+
+    if graph_id not in GRAPH_PRESETS:
+        raise ValueError("Invalid graph.")
+
+    path = (
+        Path(__file__).parent
+        / "graphs"
+        / "presets"
+        / f"{graph_id}.json"
+    )
+
+    with open(path, encoding="utf-8") as file:
+        data = json.load(file)
+
+    return {
+        int(vertex): neighbours
+        for vertex, neighbours in data.items()
+    }
 
 # Create game:
-def create_game(cost_mode=COST_MODE):
-    graph = make_grid(GRID_ROWS, GRID_COLS)
+def create_game(cost_mode=COST_MODE, graph_id="grid"):
+    graph = load_graph(graph_id)
 
     return FirefighterGame(
         graph=graph,
@@ -60,9 +88,10 @@ def get_game_state():
         })
 
     return {
-        "graph_type": "grid",
-        "rows": GRID_ROWS,
-        "cols": GRID_COLS,
+        "graph_type": "grid" if current_graph_id == "grid" else "network",
+        "graph_id": current_graph_id,
+        "rows": GRID_ROWS if current_graph_id == "grid" else None,
+        "cols": GRID_COLS if current_graph_id == "grid" else None,  
         "vertices": vertices,
         "burning": sorted(game.burning),
         "defended": sorted(game.defended),
@@ -114,7 +143,7 @@ class GameHandler(BaseHTTPRequestHandler):
 
     # Player actions:
     def do_POST(self):
-        global game
+        global game, current_graph_id
 
         # Restart game:
         if self.path == "/api/restart":
@@ -122,14 +151,25 @@ class GameHandler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(length)) if length else {}
 
             cost_mode = data.get("cost_mode", COST_MODE)
+            graph_id = data.get("graph_id", "grid")
+
+            if graph_id != "grid" and graph_id not in GRAPH_PRESETS:
+                self.send_json({"error": "Invalid graph"}, 400)
+                return
 
             if cost_mode not in ("distance", "random"):
                 self.send_json({"error": "Invalid cost mode"}, 400)
                 return
-
-            with game_lock:
-                game = create_game(cost_mode)
-                state = get_game_state()
+            
+            try:
+                with game_lock:
+                    game = create_game(cost_mode, graph_id)
+                    current_graph_id = graph_id
+                    state = get_game_state()
+            
+            except (OSError, ValueError) as error:
+                self.send_json({"error": str(error)}, 400)
+                return
 
             self.send_json(state)
             return
