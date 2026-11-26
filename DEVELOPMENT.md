@@ -337,3 +337,51 @@ Updated both the game and the solver so the budget resets at the start of each n
 - Added a clearer game-over display showing the number of vertices saved and burned.
 - Changed the displayed terminology from safe to undefended to better represent the vertex state.
 - Retained the existing backend functionality and internal vertex statuses.
+
+## Step 15 – Game Engine Improvements
+
+- Fixed distance-based defence costs for disconnected graphs.
+- Assigned a defence cost of 1 to vertices unreachable by the fire.
+- Separated starting a new game from restarting an existing game.
+- Ensured random defence costs remain the same when restarting.
+- Removed remaining React Flow dependencies.
+
+## Step 16.1 – General CP-SAT Solver
+
+### Goal
+
+Extend the existing solver to support the different game configurations.
+
+### Implemented
+
+- Extended the CP-SAT model to support both distance-based and random defence costs.
+- Installed NetworkX to replace custom shortest-path calculations.
+- Used NetworkX in both the game engine and solver.
+- Simplified budget constraints to reflect the removal of budget carry-over.
+- Updated the objective to maximise the number of saved vertices.
+- Added solver runtime and objective bound to the returned results.
+- Distinguished between optimal and feasible solutions.
+- Retained solution verification through the existing game engine.
+
+## Step 16.2 – Solver API Integration
+
+- Connected the CP-SAT solver to the backend API.
+- Added the `/api/solve` endpoint.
+- Stored a copy of the original game instance using `deepcopy`.
+- Ensured the solver uses the same graph, starting fire, budget and defence costs as the player.
+- Prevented the solver from modifying the player's game state.
+- Simplified restarting by restoring the original game instance.
+- Introduced a solver time limit of 30 seconds.
+
+## Step 16.3 – Code Cleanup
+
+- Removed the remaining grid-specific settings from the API.
+- Removed the custom grid generator in favour of NetworkX graph generation.
+- Removed the obsolete `step()` method.
+- Simplified the game engine and API logic.
+- Removed duplicate game settings from the frontend.
+- Consolidated repeated frontend API request logic.
+- Removed unnecessary initial game loading.
+- Removed default Vite styling and unused files.
+- Updated the browser page title.
+- Retained the existing gameplay mechanics and visual design.

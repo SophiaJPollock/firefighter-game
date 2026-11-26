@@ -1,31 +1,30 @@
 import json
+from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
 from pathlib import Path
+
 from backend.game import FirefighterGame
-from backend.graphs.grid import make_grid
+from backend.solver.cpsat import solve_game
 
 
 # Game settings:
-GRID_ROWS = 5
-GRID_COLS = 5
 STARTING_FIRE = [0]
 STARTING_BUDGET = 3
 BUDGET_PER_TURN = 3
 COST_MODE = "distance"
+SOLVER_TIME_LIMIT = 30
+
+# Graph settings:
+GRAPH_PRESETS = ("graph_1", "graph_2", "graph_3")
+DEFAULT_GRAPH = "graph_1"
 
 game_lock = Lock()
-
-# Graph presets:
-GRAPH_PRESETS = ("graph_1", "graph_2", "graph_3")
-current_graph_id = "grid"
+current_graph_id = DEFAULT_GRAPH
 
 
 # Load graph:
 def load_graph(graph_id):
-    if graph_id == "grid":
-        return make_grid(GRID_ROWS, GRID_COLS)
-
     if graph_id not in GRAPH_PRESETS:
         raise ValueError("Invalid graph.")
 
@@ -46,26 +45,25 @@ def load_graph(graph_id):
 
 
 # Create game:
-def create_game(cost_mode=COST_MODE, graph_id="grid"):
-    graph = load_graph(graph_id)
-
-    new_game = FirefighterGame(
-        graph=graph,
+def create_game(cost_mode=COST_MODE, graph_id=DEFAULT_GRAPH):
+    game = FirefighterGame(
+        graph=load_graph(graph_id),
         burning=STARTING_FIRE,
         cost_mode=cost_mode,
         budget=STARTING_BUDGET,
         budget_per_turn=BUDGET_PER_TURN,
     )
 
-    # Generate random costs:
     if cost_mode == "random":
-        for vertex in graph:
-            new_game.calculate_random_costs(vertex)
+        for vertex in game.graph:
+            game.calculate_random_costs(vertex)
 
-    return new_game
+    return game
 
 
-game = create_game()
+# Initial game:
+initial_game = create_game()
+game = deepcopy(initial_game)
 
 
 # Get game state:
@@ -73,7 +71,6 @@ def get_game_state():
     vertices = []
 
     for vertex, neighbours in game.graph.items():
-
         if vertex in game.burning:
             status = "burning"
             cost = None
@@ -94,10 +91,7 @@ def get_game_state():
         })
 
     return {
-        "graph_type": "grid" if current_graph_id == "grid" else "network",
         "graph_id": current_graph_id,
-        "rows": GRID_ROWS if current_graph_id == "grid" else None,
-        "cols": GRID_COLS if current_graph_id == "grid" else None,
         "vertices": vertices,
         "burning": sorted(game.burning),
         "defended": sorted(game.defended),
@@ -131,6 +125,23 @@ class GameHandler(BaseHTTPRequestHandler):
 
         self.wfile.write(response)
 
+    # Read request:
+    def read_json(self):
+        length = int(self.headers.get("Content-Length", 0))
+
+        if length < 0 or length > 10000:
+            raise ValueError("Invalid request body.")
+
+        if length == 0:
+            return {}
+
+        data = json.loads(self.rfile.read(length))
+
+        if not isinstance(data, dict):
+            raise ValueError("Invalid request body.")
+
+        return data
+
     # Browser requests:
     def do_OPTIONS(self):
         self.send_json({})
@@ -138,7 +149,6 @@ class GameHandler(BaseHTTPRequestHandler):
     # Get current game:
     def do_GET(self):
         if self.path == "/api/state":
-
             with game_lock:
                 state = get_game_state()
 
@@ -149,125 +159,96 @@ class GameHandler(BaseHTTPRequestHandler):
 
     # Player actions:
     def do_POST(self):
-        global game, current_graph_id
+        global game, initial_game, current_graph_id
 
-        # Start or restart game:
-        if self.path in ("/api/new-game", "/api/restart"):
-            length = int(self.headers.get("Content-Length", 0))
-            data = json.loads(self.rfile.read(length)) if length else {}
-
-            cost_mode = data.get("cost_mode", COST_MODE)
-            graph_id = data.get("graph_id", "grid")
-
-            if graph_id != "grid" and graph_id not in GRAPH_PRESETS:
-                self.send_json({"error": "Invalid graph"}, 400)
-                return
-
-            if cost_mode not in ("distance", "random"):
-                self.send_json({"error": "Invalid cost mode"}, 400)
-                return
+        # Solve original game:
+        if self.path == "/api/solve":
+            with game_lock:
+                original = initial_game
+                solver_game = deepcopy(original)
 
             try:
-                with game_lock:
-                    new_game = create_game(cost_mode, graph_id)
+                result = solve_game(
+                    solver_game,
+                    time_limit=SOLVER_TIME_LIMIT,
+                )
 
-                    # Preserve costs when restarting:
-                    if (
-                        self.path == "/api/restart"
-                        and graph_id == current_graph_id
-                        and cost_mode == game.cost_mode
-                    ):
-                        new_game.costs = game.costs.copy()
-
-                    game = new_game
-                    current_graph_id = graph_id
-                    state = get_game_state()
-
-            except (OSError, ValueError) as error:
-                self.send_json({"error": str(error)}, 400)
+            except (ValueError, RuntimeError) as error:
+                self.send_json({"error": str(error)}, 500)
                 return
 
-            self.send_json(state)
-            return
-
-        # End turn:
-        if self.path == "/api/end-turn":
-
             with game_lock:
-                if game.is_game_over():
+                if initial_game is not original:
                     self.send_json(
-                        {"error": "The game is already over."},
-                        400,
+                        {"error": "A new game has been started."},
+                        409,
                     )
                     return
 
-                game.end_turn()
+            self.send_json(result)
+            return
+
+        # Update game:
+        try:
+            with game_lock:
+
+                # Start new game:
+                if self.path == "/api/new-game":
+                    data = self.read_json()
+
+                    graph_id = data.get(
+                        "graph_id", DEFAULT_GRAPH
+                    )
+                    cost_mode = data.get(
+                        "cost_mode", COST_MODE
+                    )
+
+                    initial_game = create_game(
+                        cost_mode, graph_id
+                    )
+
+                    game = deepcopy(initial_game)
+                    current_graph_id = graph_id
+
+                # Restart game:
+                elif self.path == "/api/restart":
+                    game = deepcopy(initial_game)
+
+                # Defend vertex:
+                elif self.path == "/api/defend":
+                    if game.is_game_over():
+                        raise ValueError("The game is already over.")
+
+                    data = self.read_json()
+                    vertex = data.get("vertex")
+
+                    if type(vertex) is not int:
+                        raise ValueError("Vertex must be an integer.")
+
+                    game.defend(vertex)
+
+                # End turn:
+                elif self.path == "/api/end-turn":
+                    if game.is_game_over():
+                        raise ValueError("The game is already over.")
+
+                    game.end_turn()
+
+                else:
+                    self.send_json({"error": "Not found"}, 404)
+                    return
+
                 state = get_game_state()
 
-            self.send_json(state)
+        except (OSError, ValueError) as error:
+            self.send_json({"error": str(error)}, 400)
             return
-
-        # Check action:
-        if self.path != "/api/defend":
-            self.send_json(
-                {"error": "Not found"},
-                404,
-            )
-            return
-
-        # Get selected vertex:
-        try:
-            length = int(
-                self.headers.get("Content-Length", 0)
-            )
-
-            if length <= 0 or length > 10000:
-                raise ValueError("Invalid request body.")
-
-            data = json.loads(
-                self.rfile.read(length).decode("utf-8")
-            )
-
-            vertex = data["vertex"]
-
-            if type(vertex) is not int:
-                raise ValueError("Vertex must be an integer.")
-
-        except (ValueError, KeyError, TypeError):
-            self.send_json(
-                {"error": "Invalid move request."},
-                400,
-            )
-            return
-
-        # Defend vertex:
-        with game_lock:
-
-            if game.is_game_over():
-                self.send_json(
-                    {"error": "The game is already over."},
-                    400,
-                )
-                return
-
-            try:
-                game.defend(vertex)
-
-            except ValueError as error:
-                self.send_json(
-                    {"error": str(error)},
-                    400,
-                )
-                return
-
-            state = get_game_state()
 
         self.send_json(state)
 
 
 # Start server:
 if __name__ == "__main__":
-
     server = ThreadingHTTPServer(
         ("127.0.0.1", 8000),
         GameHandler,
@@ -275,7 +256,6 @@ if __name__ == "__main__":
 
     print("Firefighter API running!")
     print("Open http://localhost:8000/api/state")
-    print("Press Ctrl+C to stop.")
 
     try:
         server.serve_forever()

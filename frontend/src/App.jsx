@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import './App.css';
 import MainMenu from './MainMenu/MainMenu';
 import GameSetup from './GameSetup/GameSetup';
@@ -10,10 +10,14 @@ import Campfire from './MainMenu/Campfire';
 // Connect to backend:
 const API_URL = 'http://127.0.0.1:8000';
 
-async function apiRequest(path, options = {}) {
+async function apiRequest(path, body) {
   const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
     cache: 'no-store',
-    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 
   const data = await response.json();
@@ -29,83 +33,30 @@ function App() {
   // Game info:
   const [game, setGame] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  // Cost mode:
-  const [gameCostMode, setGameCostMode] = useState('distance');
-
-  // Graph settings:
-  const [gameGraphId, setGameGraphId] = useState('graph_1');
+  // Game layout:
   const [gameLayout, setGameLayout] = useState('force');
 
   // Current screen:
   const [screen, setScreen] = useState('menu');
   const [setupError, setSetupError] = useState('');
 
-  // Load game:
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadGame() {
-      try {
-        const state = await apiRequest('/api/state');
-
-        if (!cancelled) {
-          setGame(state);
-          setError('');
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(`Could not load the game: ${err.message}`);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadGame();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Start new game:
-  async function startGame({ costMode, layout, graphId = 'graph_1' }) {
-    setSetupError('');
-
-    // Check graph settings:
-    if (
-      !['force', 'radial', 'tree'].includes(layout) ||
-      !['graph_1', 'graph_2', 'graph_3'].includes(graphId)
-    ) {
-      setSetupError('Choose a valid graph and layout.');
-      return;
-    }
-
+  async function startGame({ costMode, layout, graphId }) {
     setBusy(true);
+    setSetupError('');
 
     try {
       const state = await apiRequest('/api/new-game', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cost_mode: costMode,
-          graph_id: graphId,
-        }),
+        cost_mode: costMode,
+        graph_id: graphId,
       });
 
       setGame(state);
-      setGameGraphId(graphId);
       setGameLayout(layout);
-      setGameCostMode(costMode);
       setSelected(null);
       setError('');
       setMessage('');
@@ -118,12 +69,11 @@ function App() {
     }
   }
 
-  // Select vertex:
+  // Selected vertex:
   const selectedVertex = game?.vertices.find(
     (vertex) => vertex.id === selected
   );
 
-  // Check if can defend:
   const canDefend =
     selectedVertex?.status === 'safe' &&
     typeof selectedVertex.cost === 'number' &&
@@ -131,65 +81,8 @@ function App() {
     !game.game_over &&
     !busy;
 
-  // Defend vertex:
-  async function defendSelected() {
-    if (!canDefend) return;
-
-    setBusy(true);
-    setError('');
-    setMessage('');
-
-    try {
-      const newState = await apiRequest('/api/defend', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          vertex: selected,
-        }),
-      });
-
-      setGame(newState);
-      setSelected(null);
-      setMessage(`Vertex ${selected} defended.`);
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // End turn:
-  async function endTurn() {
-    if (busy || game.game_over) return;
-
-    setBusy(true);
-    setError('');
-    setMessage('');
-
-    try {
-      const newState = await apiRequest('/api/end-turn', {
-        method: 'POST',
-      });
-
-      setGame(newState);
-      setSelected(null);
-
-      if (!newState.game_over) {
-        setMessage('Fire spread. Next turn started.');
-      }
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Restart game:
-  async function restartGame() {
+  // Game actions:
+  async function gameAction(path, body, successMessage) {
     if (busy) return;
 
     setBusy(true);
@@ -197,26 +90,48 @@ function App() {
     setMessage('');
 
     try {
-      const newState = await apiRequest('/api/restart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cost_mode: gameCostMode,
-          graph_id: gameGraphId,
-        }),
-      });
+      const state = await apiRequest(path, body);
 
-      setGame(newState);
+      setGame(state);
       setSelected(null);
-      setMessage('Game restarted.');
+      setMessage(successMessage);
 
     } catch (err) {
       setError(err.message);
     } finally {
       setBusy(false);
     }
+  }
+
+  // Defend vertex:
+  function defendSelected() {
+    if (!canDefend) return;
+
+    gameAction(
+      '/api/defend',
+      { vertex: selected },
+      `Vertex ${selected} defended.`
+    );
+  }
+
+  // End turn:
+  function endTurn() {
+    if (game.game_over) return;
+
+    gameAction(
+      '/api/end-turn',
+      undefined,
+      'Fire spread. Next turn started.'
+    );
+  }
+
+  // Restart game:
+  function restartGame() {
+    gameAction(
+      '/api/restart',
+      undefined,
+      'Game restarted.'
+    );
   }
 
   // Return to setup:
@@ -239,19 +154,7 @@ function App() {
 
   // Main menu:
   if (screen === 'menu') {
-    return (
-      <MainMenu onPlay={() => setScreen('setup')} />
-    );
-  }
-
-  // Loading screen:
-  if (loading) {
-    return (
-      <main className="app">
-        <h1>Firefighter Game</h1>
-        <p>Loading game...</p>
-      </main>
-    );
+    return <MainMenu onPlay={() => setScreen('setup')} />;
   }
 
   // Game setup:
@@ -269,31 +172,11 @@ function App() {
     );
   }
 
-  // Loading error:
-  if (!game) {
-    return (
-      <main className="app">
-        <h1>Firefighter Game</h1>
-        <p role="alert">{error}</p>
-        <p>Unable to start the game.</p>
-
-        <button onClick={() => setScreen('setup')}>
-          Back
-        </button>
-      </main>
-    );
-  }
-
   // Count vertices:
   const burningCount = game.burning.length;
   const defendedCount = game.defended.length;
-
-  const undefendedCount = game.vertices.filter(
-    (vertex) => vertex.status === 'safe'
-  ).length;
-
-  const savedCount = undefendedCount + defendedCount;
   const totalCount = game.vertices.length;
+  const savedCount = totalCount - burningCount;
 
   // Display status:
   const statusLabels = {
@@ -373,9 +256,7 @@ function App() {
               <span>Vertices saved</span>
             </div>
 
-            <p>
-              {burningCount} vertices burned
-            </p>
+            <p>{burningCount} vertices burned</p>
 
           </section>
         )}
@@ -416,38 +297,31 @@ function App() {
 
               {game.game_over ? (
                 <p>
-                  Restart the game or return to
-                  setup to choose a new graph.
+                  Restart the game or return to setup
+                  to choose a new graph.
                 </p>
               ) : selectedVertex ? (
                 <>
                   <p>
                     Selected vertex:
-                    <strong>
-                      {' '}{selectedVertex.id}
-                    </strong>
+                    <strong> {selectedVertex.id}</strong>
                   </p>
 
                   <p>
                     Status:
                     <strong>
-                      {' '}
-                      {statusLabels[selectedVertex.status]
-                        ?? selectedVertex.status}
+                      {' '}{statusLabels[selectedVertex.status]}
                     </strong>
                   </p>
 
                   <p>
                     Defence cost:
-                    <strong>
-                      {' '}{selectedVertex.cost}
-                    </strong>
+                    <strong> {selectedVertex.cost}</strong>
                   </p>
 
                   {selectedVertex.cost > game.budget && (
                     <p className="warning">
-                      Not enough budget to
-                      defend this vertex.
+                      Not enough budget to defend this vertex.
                     </p>
                   )}
                 </>
@@ -514,17 +388,15 @@ function App() {
             {/* How to play: */}
             <h3>How to play</h3>
 
-            <p>
-              Select an undefended vertex to defend it.
-            </p>
+            <p>Select an undefended vertex to defend it.</p>
 
             <p>
               Defend as many vertices as your budget allows.
             </p>
 
             <p>
-              Click End turn when you're ready for
-              the fire to spread.
+              Click End turn when you're ready for the fire
+              to spread.
             </p>
 
           </aside>

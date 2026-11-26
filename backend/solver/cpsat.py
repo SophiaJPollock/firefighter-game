@@ -4,12 +4,10 @@ import networkx as nx
 from ortools.sat.python import cp_model
 
 from backend.game import FirefighterGame
-from backend.graphs.grid import make_grid
 
 
 # Find best defence plan:
 def solve_game(game, time_limit=30):
-
     vertices = list(game.graph)
     horizon = len(vertices) - len(game.burning)
 
@@ -26,7 +24,7 @@ def solve_game(game, time_limit=30):
         }
 
     # Graph structure:
-    graph = nx.DiGraph(game.graph)
+    graph = game.network
 
     incoming = {
         v: list(graph.predecessors(v))
@@ -35,7 +33,6 @@ def solve_game(game, time_limit=30):
 
     # Distance costs:
     if game.cost_mode == "distance":
-
         distances = {
             v: nx.single_source_shortest_path_length(
                 graph, v, cutoff=2
@@ -44,18 +41,12 @@ def solve_game(game, time_limit=30):
         }
 
         distance_1 = {
-            v: [
-                u for u, d in distances[v].items()
-                if d == 1
-            ]
+            v: [u for u, d in distances[v].items() if d == 1]
             for v in vertices
         }
 
         distance_2 = {
-            v: [
-                u for u, d in distances[v].items()
-                if 1 <= d <= 2
-            ]
+            v: [u for u, d in distances[v].items() if 1 <= d <= 2]
             for v in vertices
         }
 
@@ -93,29 +84,18 @@ def solve_game(game, time_limit=30):
 
     # Starting state:
     for v in vertices:
-        model.Add(
-            burning[v, 0] == int(v in game.burning)
-        )
-
-        model.Add(
-            defended[v, 0] == int(v in game.defended)
-        )
+        model.Add(burning[v, 0] == int(v in game.burning))
+        model.Add(defended[v, 0] == int(v in game.defended))
 
     # Turn rules:
     for t in range(horizon):
-
         costs_this_turn = []
 
         for v in vertices:
 
             # Defend only safe vertices:
-            model.Add(
-                defend[v, t] + defended[v, t] <= 1
-            )
-
-            model.Add(
-                defend[v, t] + burning[v, t] <= 1
-            )
+            model.Add(defend[v, t] + defended[v, t] <= 1)
+            model.Add(defend[v, t] + burning[v, t] <= 1)
 
             # Defended vertices stay defended:
             model.Add(
@@ -124,16 +104,13 @@ def solve_game(game, time_limit=30):
             )
 
             # Burning vertices stay burning:
-            model.Add(
-                burning[v, t + 1] >= burning[v, t]
-            )
+            model.Add(burning[v, t + 1] >= burning[v, t])
 
             # Fire spreads to undefended neighbours:
             for u in incoming[v]:
                 model.Add(
                     burning[v, t + 1]
-                    >= burning[u, t]
-                    - defended[v, t + 1]
+                    >= burning[u, t] - defended[v, t + 1]
                 )
 
             # Fire cannot appear without a burning neighbour:
@@ -143,29 +120,21 @@ def solve_game(game, time_limit=30):
                 + sum(burning[u, t] for u in incoming[v])
             )
 
-            # Vertices cannot be burning and defended:
+            # Burning and defended are mutually exclusive:
             model.Add(
-                burning[v, t + 1]
-                + defended[v, t + 1] <= 1
+                burning[v, t + 1] + defended[v, t + 1] <= 1
             )
 
             # Random defence costs:
             if game.cost_mode == "random":
-
                 costs_this_turn.append(
                     random_costs.get(v, 0) * defend[v, t]
                 )
 
             # Distance defence costs:
             else:
-
-                near_1 = model.NewBoolVar(
-                    f"near1_{v}_{t}"
-                )
-
-                near_2 = model.NewBoolVar(
-                    f"near2_{v}_{t}"
-                )
+                near_1 = model.NewBoolVar(f"near1_{v}_{t}")
+                near_2 = model.NewBoolVar(f"near2_{v}_{t}")
 
                 if distance_1[v]:
                     model.AddMaxEquality(
@@ -184,22 +153,15 @@ def solve_game(game, time_limit=30):
                     model.Add(near_2 == 0)
 
                 # Additional distance charges:
-                charged_1 = model.NewBoolVar(
-                    f"charge1_{v}_{t}"
-                )
+                charged_1 = model.NewBoolVar(f"charge1_{v}_{t}")
+                charged_2 = model.NewBoolVar(f"charge2_{v}_{t}")
 
-                charged_2 = model.NewBoolVar(
-                    f"charge2_{v}_{t}"
+                model.AddMultiplicationEquality(
+                    charged_1, [defend[v, t], near_1]
                 )
 
                 model.AddMultiplicationEquality(
-                    charged_1,
-                    [defend[v, t], near_1]
-                )
-
-                model.AddMultiplicationEquality(
-                    charged_2,
-                    [defend[v, t], near_2]
+                    charged_2, [defend[v, t], near_2]
                 )
 
                 costs_this_turn.extend([
@@ -209,14 +171,9 @@ def solve_game(game, time_limit=30):
                 ])
 
         # Budget per turn:
-        turn_budget = (
-            game.budget if t == 0
-            else game.budget_per_turn
-        )
+        budget = game.budget if t == 0 else game.budget_per_turn
 
-        model.Add(
-            sum(costs_this_turn) <= turn_budget
-        )
+        model.Add(sum(costs_this_turn) <= budget)
 
     # Maximise saved vertices:
     model.Maximize(
@@ -245,24 +202,18 @@ def solve_game(game, time_limit=30):
     turns = []
 
     for t in range(horizon):
-
         if replay.is_game_over():
             break
 
-        moves = [
-            v for v in vertices
-            if solver.Value(defend[v, t])
-        ]
-
         played = []
 
-        for v in moves:
-
+        for v in vertices:
             if replay.is_game_over():
                 break
 
-            replay.defend(v)
-            played.append(v)
+            if solver.Value(defend[v, t]):
+                replay.defend(v)
+                played.append(v)
 
         turns.append(played)
 
@@ -271,9 +222,8 @@ def solve_game(game, time_limit=30):
 
     # Verify solution:
     saved = len(vertices) - len(replay.burning)
-    expected = round(solver.ObjectiveValue())
 
-    if saved != expected:
+    if saved != round(solver.ObjectiveValue()):
         raise RuntimeError(
             "Solver result disagrees with game.py."
         )
@@ -290,14 +240,12 @@ def solve_game(game, time_limit=30):
 
 # Test solver:
 if __name__ == "__main__":
+    graph = nx.to_dict_of_lists(nx.cycle_graph(9))
 
     for cost_mode in ("distance", "random"):
-
         game = FirefighterGame(
-            graph=make_grid(3, 3),
+            graph=graph,
             burning=[0],
-            budget=3,
-            budget_per_turn=3,
             cost_mode=cost_mode,
         )
 
