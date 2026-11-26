@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import './App.css';
-
+import MainMenu from "./MainMenu/MainMenu";
 // Connect to backend:
 const API_URL = 'http://127.0.0.1:8000';
 
@@ -27,6 +27,9 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  // Current screen:
+  const [screen, setScreen] = useState("menu");
 
   // Load game:
   useEffect(() => {
@@ -143,7 +146,11 @@ function App() {
       setBusy(false);
     }
   }
-
+  
+  // Main menu:
+  if (screen === "menu") {
+      return <MainMenu onPlay={() => setScreen("game")} />;
+  }
   // Loading screen:
   if (loading) {
     return (
