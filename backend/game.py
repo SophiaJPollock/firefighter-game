@@ -1,4 +1,5 @@
 import random
+import networkx as nx
 
 
 class FirefighterGame:
@@ -26,6 +27,9 @@ class FirefighterGame:
                         f"neighbour {neighbour}."
                     )
 
+        # NetworkX graph:
+        self.network = nx.DiGraph(self.graph)
+
         self.burning = set(burning or [])
         self.defended = set(defended or [])
 
@@ -50,7 +54,7 @@ class FirefighterGame:
         if budget < 0 or budget_per_turn < 0:
             raise ValueError("Budget values cannot be negative.")
 
-    # Spreading & Blocking Fire:
+    # Spreading & blocking fire:
     def defend(self, vertex):
 
         # Must exist in graph:
@@ -95,29 +99,18 @@ class FirefighterGame:
         self.defend(vertex)
         self.end_turn()
 
-    # Defence costs:
+    # Distance defence costs:
     def calculate_distance_costs(self, vertex):
 
         if vertex in self.burning:
             return None
 
-        distances = {vertex: 0}
-        queue = [vertex]
-
-        while queue:
-            current = queue.pop(0)
-
-            for neighbour in self.graph[current]:
-                if neighbour not in distances:
-                    distances[neighbour] = distances[current] + 1
-                    queue.append(neighbour)
+        distances = nx.single_source_shortest_path_length(
+            self.network, vertex, cutoff=2
+        )
 
         distance_from_fire = min(
-            (
-                distances[burning_vertex]
-                for burning_vertex in self.burning
-                if burning_vertex in distances
-            ),
+            (distances[v] for v in self.burning if v in distances),
             default=float("inf"),
         )
 
@@ -128,6 +121,7 @@ class FirefighterGame:
         else:
             return 1
 
+    # Random defence costs:
     def calculate_random_costs(self, vertex):
 
         if vertex in self.burning:
@@ -138,6 +132,7 @@ class FirefighterGame:
 
         return self.costs[vertex]
 
+    # Calculate defence costs:
     def calculate_costs(self, vertex):
 
         if self.cost_mode == "random":
@@ -152,7 +147,6 @@ class FirefighterGame:
     # Game state:
     def is_game_over(self):
 
-        # Game is over if there are no new vertices for fire to spread to:
         for vertex in self.burning:
             for neighbour in self.graph[vertex]:
                 if neighbour not in self.burning and neighbour not in self.defended:
