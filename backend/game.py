@@ -1,7 +1,8 @@
 import random
 
+
 class FirefighterGame:
-    
+
     def __init__(
         self,
         graph,
@@ -11,12 +12,12 @@ class FirefighterGame:
         budget=3,
         budget_per_turn=3,
     ):
-        
+
         self.graph = {
             vertex: list(neighbours)
             for vertex, neighbours in graph.items()
         }
-        
+
         for vertex, neighbours in self.graph.items():
             for neighbour in neighbours:
                 if neighbour not in self.graph:
@@ -36,43 +37,43 @@ class FirefighterGame:
 
         if self.burning & self.defended:
             raise ValueError("A vertex cannot be both burning and defended.")
-        
+
         self.turn = 0
         self.budget = budget
         self.budget_per_turn = budget_per_turn
         self.cost_mode = cost_mode
         self.costs = {}
-        
+
         if cost_mode not in ("distance", "random"):
             raise ValueError("Invalid cost mode.")
 
         if budget < 0 or budget_per_turn < 0:
             raise ValueError("Budget values cannot be negative.")
-    
+
     # Spreading & Blocking Fire:
     def defend(self, vertex):
-        
-        # Must exist in graph
+
+        # Must exist in graph:
         if vertex not in self.graph:
             raise ValueError("Unknown vertex.")
-        
-        # Cannot be already burning
+
+        # Cannot be already burning:
         if vertex in self.burning:
             raise ValueError("Cannot defend a burning vertex.")
-        
-        # Cannot be already defended
+
+        # Cannot be already defended:
         if vertex in self.defended:
             raise ValueError("Vertex is already defended.")
 
-        # Cannot cost more than budget
+        # Cannot cost more than budget:
         cost = self.calculate_costs(vertex)
-        
+
         if cost > self.budget:
             raise ValueError("Not enough budget to defend this vertex.")
-        
+
         self.budget -= cost
         self.defended.add(vertex)
-        
+
     def spread_fire(self):
         new_burning = set(self.burning)
 
@@ -82,7 +83,7 @@ class FirefighterGame:
                     new_burning.add(neighbour)
 
         self.burning = new_burning
-    
+
     # End turn:
     def end_turn(self):
         self.spread_fire()
@@ -93,8 +94,8 @@ class FirefighterGame:
     def step(self, vertex):
         self.defend(vertex)
         self.end_turn()
-    
-    # Defence Costs:
+
+    # Defence costs:
     def calculate_distance_costs(self, vertex):
 
         if vertex in self.burning:
@@ -105,16 +106,19 @@ class FirefighterGame:
 
         while queue:
             current = queue.pop(0)
-    
+
             for neighbour in self.graph[current]:
                 if neighbour not in distances:
                     distances[neighbour] = distances[current] + 1
                     queue.append(neighbour)
 
         distance_from_fire = min(
-            distances[burning_vertex]
-            for burning_vertex in self.burning
-            if burning_vertex in distances
+            (
+                distances[burning_vertex]
+                for burning_vertex in self.burning
+                if burning_vertex in distances
+            ),
+            default=float("inf"),
         )
 
         if distance_from_fire == 1:
@@ -123,8 +127,9 @@ class FirefighterGame:
             return 2
         else:
             return 1
-        
+
     def calculate_random_costs(self, vertex):
+
         if vertex in self.burning:
             return None
 
@@ -133,8 +138,8 @@ class FirefighterGame:
 
         return self.costs[vertex]
 
-
     def calculate_costs(self, vertex):
+
         if self.cost_mode == "random":
             return self.calculate_random_costs(vertex)
 
@@ -142,16 +147,15 @@ class FirefighterGame:
             return self.calculate_distance_costs(vertex)
 
         else:
-            raise ValueError("Invalid cost mode")
+            raise ValueError("Invalid cost mode.")
 
-    
-    # Game State:
+    # Game state:
     def is_game_over(self):
-    # game is over if there are no possible new vertices for the fire to spread to
+
+        # Game is over if there are no new vertices for fire to spread to:
         for vertex in self.burning:
             for neighbour in self.graph[vertex]:
                 if neighbour not in self.burning and neighbour not in self.defended:
                     return False
 
         return True
-    

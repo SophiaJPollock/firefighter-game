@@ -75,7 +75,7 @@ function App() {
     };
   }, []);
 
-  // Start game:
+  // Start new game:
   async function startGame({ costMode, layout, graphId = 'graph_1' }) {
     setSetupError('');
 
@@ -91,7 +91,7 @@ function App() {
     setBusy(true);
 
     try {
-      const state = await apiRequest('/api/restart', {
+      const state = await apiRequest('/api/new-game', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -210,7 +210,7 @@ function App() {
 
       setGame(newState);
       setSelected(null);
-      setMessage('New game started.');
+      setMessage('Game restarted.');
 
     } catch (err) {
       setError(err.message);

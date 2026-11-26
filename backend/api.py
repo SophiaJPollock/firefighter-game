@@ -1,11 +1,9 @@
-
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
 from pathlib import Path
 from backend.game import FirefighterGame
 from backend.graphs.grid import make_grid
-
 
 
 # Game settings:
@@ -46,17 +44,25 @@ def load_graph(graph_id):
         for vertex, neighbours in data.items()
     }
 
+
 # Create game:
 def create_game(cost_mode=COST_MODE, graph_id="grid"):
     graph = load_graph(graph_id)
 
-    return FirefighterGame(
+    new_game = FirefighterGame(
         graph=graph,
         burning=STARTING_FIRE,
         cost_mode=cost_mode,
         budget=STARTING_BUDGET,
         budget_per_turn=BUDGET_PER_TURN,
     )
+
+    # Generate random costs:
+    if cost_mode == "random":
+        for vertex in graph:
+            new_game.calculate_random_costs(vertex)
+
+    return new_game
 
 
 game = create_game()
@@ -91,7 +97,7 @@ def get_game_state():
         "graph_type": "grid" if current_graph_id == "grid" else "network",
         "graph_id": current_graph_id,
         "rows": GRID_ROWS if current_graph_id == "grid" else None,
-        "cols": GRID_COLS if current_graph_id == "grid" else None,  
+        "cols": GRID_COLS if current_graph_id == "grid" else None,
         "vertices": vertices,
         "burning": sorted(game.burning),
         "defended": sorted(game.defended),
@@ -145,8 +151,8 @@ class GameHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         global game, current_graph_id
 
-        # Restart game:
-        if self.path == "/api/restart":
+        # Start or restart game:
+        if self.path in ("/api/new-game", "/api/restart"):
             length = int(self.headers.get("Content-Length", 0))
             data = json.loads(self.rfile.read(length)) if length else {}
 
@@ -160,13 +166,23 @@ class GameHandler(BaseHTTPRequestHandler):
             if cost_mode not in ("distance", "random"):
                 self.send_json({"error": "Invalid cost mode"}, 400)
                 return
-            
+
             try:
                 with game_lock:
-                    game = create_game(cost_mode, graph_id)
+                    new_game = create_game(cost_mode, graph_id)
+
+                    # Preserve costs when restarting:
+                    if (
+                        self.path == "/api/restart"
+                        and graph_id == current_graph_id
+                        and cost_mode == game.cost_mode
+                    ):
+                        new_game.costs = game.costs.copy()
+
+                    game = new_game
                     current_graph_id = graph_id
                     state = get_game_state()
-            
+
             except (OSError, ValueError) as error:
                 self.send_json({"error": str(error)}, 400)
                 return
