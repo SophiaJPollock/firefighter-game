@@ -303,3 +303,37 @@ Updated both the game and the solver so the budget resets at the start of each n
 - Added layout selection to Game Settings.
 - Connected the graph visualisations to the existing gameplay.
 - Removed the original grid display from the frontend.
+
+## Step 12 – Gameplay interface redesign
+
+- Applied the existing pixel-art forest background to the gameplay screen.
+- Reused the animated Firefighter logo and campfire.
+- Redesigned the graph panel, game controls and statistics.
+- Introduced consistent pixel fonts, colours and button styling.
+- Replaced circular vertices with pixel-art shapes.
+- Created animated fire and shield sprites for burning and defended vertices.
+- Experimented with tree sprites before removing them to improve readability.
+- Enlarged and centred defence costs within undefended vertices.
+
+## Step 13 – Cytoscape graph layouts
+
+- Installed Cytoscape.js to replace the custom graph layout algorithms.
+- Separated layout calculations into GraphLayouts.js.
+- Implemented three layouts using Cytoscape:
+  - Force-directed (CoSE).
+  - Radial (concentric).
+  - Tree-style (breadth-first).
+- Retained custom SVG rendering to preserve the visual design.
+- Increased the minimum spacing between vertices to improve readability.
+- Allowed the graph display to expand and scroll when additional space is required.
+- Changed layout calculations to depend on graph structure rather than game state, keeping vertex positions stable between turns.
+
+## Step 14 – Gameplay interface improvements
+
+- Added a back button to return to the game setup screen.
+- Added confirmation before leaving an unfinished game.
+- Improved the visual distinction between enabled and disabled buttons.
+- Improved the hierarchy of headings and instructional text.
+- Added a clearer game-over display showing the number of vertices saved and burned.
+- Changed the displayed terminology from safe to undefended to better represent the vertex state.
+- Retained the existing backend functionality and internal vertex statuses.
