@@ -256,3 +256,50 @@ Find a defence strategy that saves as many vertices as possible.
 ### Budget Change
 
 Updated both the game and the solver so the budget resets at the start of each new turn. With the current settings, the player gets a fresh 3 points each turn and any unused points expire.
+
+## Step 8: Main Menu
+
+**Visual Design:**
+- Designed an 8-bit pixel-art style with a firefighter title and Play button.
+- Created a forest background with layered trees, a night sky and animated campfire.
+- Adjusted the colours, fonts and layout.
+
+**Implementation:**
+- Created the React components and CSS for the main menu.
+- Connected the Play button to the next screen.
+
+## Step 9: Game Settings
+
+**Visual Design:**
+- Designed a settings window matching the main menu's style.
+- Added matching buttons, fonts and colours.
+
+**Implementation:**
+- Created the Game Settings screen.
+- Added distance-based and random defence cost options.
+- Updated the backend to support the selected cost mode.
+- Connected the settings screen to the game.
+
+## Step 10: Graph Generation
+
+- Decided to replace the original grid with more general graph structures.
+- Created a graph generator producing connected graphs with varying vertex degrees.
+- Generated three 25-vertex graph presets, with a maximum degree of four.
+- Saved the graphs as JSON files.
+- Updated the backend API to load the selected graph.
+- Added graph preset selection to Game Settings.
+
+## Step 11: Graph Visualisation
+
+**Visual Design:**
+- Chose three visualisations: force-directed, fire-centred radial and tree-style.
+- Kept the graph structure identical across layouts.
+- Used dashed lines to distinguish additional connections in the tree-style layout.
+
+**Implementation:**
+- Created the `GraphView` React component.
+- Implemented the three layout algorithms.
+- Added clickable vertices displaying their numbers, defence costs and status.
+- Added layout selection to Game Settings.
+- Connected the graph visualisations to the existing gameplay.
+- Removed the original grid display from the frontend.
